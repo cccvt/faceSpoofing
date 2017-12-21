@@ -32,20 +32,21 @@ def makeDet(video_in, out_path, face_path, pad):
 
             for (x, y, w, h) in faces:
                 # Add padding if it exists to rectangle and ROI
-                cv2.rectangle(frame, (x, y), (-int(pad/2) + x + w + int(pad/2), -int(pad/2) + y + h + int(pad/2)), (255, 255, 0), 2)  # BGR
                 roi_color = frame[-int(pad/2)+y : y + h + int(pad/2), -int(pad/2) + x : x + w + int(pad/2)]
+                # cv2.rectangle(frame, (x, y), (-int(pad/2) + x + w + int(pad/2), -int(pad/2) + y + h + int(pad/2)), (255, 255, 0), 1)  # BGR
+                # cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 0), 2)  # BGR
                 cv2.imwrite(altsep.join((out_path, video_name+'_'+str(num)+'_'+str(int(pad/2))+img_ext)), roi_color)
-            cv2.imshow(video_name, frame)
+            # cv2.imshow(video_name, frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         else:
             break
         num += 1
-    num_ext = len([name for name in listdir(out_path) if isfile(join(out_path, name))])
-    print("Extracted {} images from {}".format(num_ext, video_name))
+    # num_ext = len([name for name in listdir(out_path) if isfile(join(out_path, name))])
+    print("Extracted {} images from '{}'".format(num, video_name))
 
     video.release()
     cv2.destroyAllWindows()
 
-    return num_ext
+    return num
