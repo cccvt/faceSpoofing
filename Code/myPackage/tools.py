@@ -1,7 +1,9 @@
-from os import listdir, makedirs, errno
+from os import listdir, makedirs, errno, system
 from os.path import isfile, join, altsep
 from natsort import natsorted, ns
 from matplotlib import pyplot as plt
+import re
+import tempfile
 
 
 def getSamples(path):
@@ -41,3 +43,28 @@ def plotImages(titles, images, title, row, col):
         plt.axis('off')
     fig.suptitle(title, fontsize=14)
     plt.show()
+
+def getVideoDetails(filepath):
+    tmpf = tempfile.NamedTemporaryFile()
+    system("ffmpeg -i \"%s\" 2> %s" % (filepath, tmpf.name))
+    lines = tmpf.readlines()
+    tmpf.close()
+    metadata = {}
+    for l in lines:
+        l = l.strip()
+        if l.startswith('Duration'):
+            metadata['duration'] = re.search('Duration: (.*?),', l).group(0).split(':',1)[1].strip(' ,')
+            metadata['bitrate'] = re.search("bitrate: (\d+ kb/s)", l).group(0).split(':')[1].strip()
+        if l.startswith('Stream #0:0'):
+            metadata['video'] = {}
+            metadata['video']['codec'], metadata['video']['profile'] = \
+                [e.strip(' ,()') for e in re.search('Video: (.*? \(.*?\)),? ', l).group(0).split(':')[1].split('(')]
+            metadata['video']['resolution'] = re.search('([1-9]\d+x\d+)', l).group(1)
+            metadata['video']['bitrate'] = re.search('(\d+ kb/s)', l).group(1)
+            metadata['video']['fps'] = re.search('(\d+ fps)', l).group(1)
+        if l.startswith('Stream #0:1'):
+            metadata['audio'] = {}
+            metadata['audio']['codec'] = re.search('Audio: (.*?) ', l).group(1)
+            metadata['audio']['frequency'] = re.search(', (.*? Hz),', l).group(1)
+            metadata['audio']['bitrate'] = re.search(', (\d+ kb/s)', l).group(1)
+    return metadata

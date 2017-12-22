@@ -1,6 +1,8 @@
 import cv2
 from os.path import altsep, basename, isfile, join, splitext
-from os import listdir
+from os import errno
+import sys
+
 
 
 def makeDet(video_in, out_path, face_path, pad):
@@ -17,7 +19,9 @@ def makeDet(video_in, out_path, face_path, pad):
     img_ext = '.png'
     video_name = splitext(basename(video_in))[0]
 
-    video = cv2.VideoCapture(video_in)
+    # video = cv2.VideoCapture(video_in, 500)
+    video = cv2.VideoCapture(video_in, 1900)
+    # video = cv2.VideoCapture(video_in, 6)
 
     num = 0
     while (video.isOpened()):
