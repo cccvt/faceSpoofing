@@ -5,7 +5,79 @@ import sys
 
 
 
-def makeDet(video_in, out_path, face_path, pad):
+def processPaths(training_real, training_attack_f, training_attack_h, test_real, test_attack_f, test_attack_h, args, pad):
+    num_faces = 0
+    # Make face extraction
+    print("Extracting faces from paths: \n"
+          "'{}' ({} videos)\n"
+          "'{}' ({} videos)\n"
+          "'{}' ({} videos)\n"
+          "'{}' ({} videos)\n"
+          "'{}' ({} videos)\n"
+          "'{}' ({} videos)\n".format(args['videoRealtr'], len(training_real),
+                                      args['videoAttackFtr'], len(training_attack_f),
+                                      args['videoAttackHtr'], len(training_attack_h),
+                                      args['videoRealte'], len(training_real),
+                                      args['videoAttackFte'], len(training_attack_f),
+                                      args['videoAttackHte'], len(training_attack_h)
+                                      ))
+
+    n = 1
+    for video in training_real:
+        print("Video processing {}/{}".format(n, len(training_real)))
+        num_faces += extract(video, args['outputReal'], args['face'], pad)
+        n += 1
+    real_faces_tr = num_faces
+
+    n = 1
+    num_faces = 0
+    for video in training_attack_f:
+        print("Video processing {}/{}".format(n, len(training_attack_f)))
+        num_faces += extract(video, args['outputAttackF'], args['face'], pad)
+        n += 1
+    attack_f_faces_tr = num_faces
+
+    n = 1
+    num_faces = 0
+    for video in training_attack_h:
+        print("Video processing {}/{}".format(n, len(training_attack_h)))
+        num_faces += extract(video, args['outputAttackH'], args['face'], pad)
+        n += 1
+    attack_h_faces_tr = num_faces
+
+    n = 1
+    for video in test_real:
+        print("Video processing {}/{}".format(n, len(training_real)))
+        num_faces += extract(video, args['outputReal'], args['face'], pad)
+        n += 1
+    real_faces_te = num_faces
+
+    n = 1
+    num_faces = 0
+    for video in test_attack_f:
+        print("Video processing {}/{}".format(n, len(training_attack_f)))
+        num_faces += extract(video, args['outputAttackF'], args['face'], pad)
+        n += 1
+    attack_f_faces_te = num_faces
+
+    n = 1
+    num_faces = 0
+    for video in test_attack_h:
+        print("Video processing {}/{}".format(n, len(training_attack_h)))
+        num_faces += extract(video, args['outputAttackH'], args['face'], pad)
+        n += 1
+    attack_h_faces_te = num_faces
+
+    print("\n\nExtracted {} real faces for training\n"
+          "Extracted {} attack faces for training (fixed)\n"
+          "Extracted {} attack faces for training (hand)\n"
+          "Extracted {} real faces for test\n"
+          "Extracted {} attack faces for test (fixed)\n"
+          "Extracted {} attack faces for test (hand)\n\n"
+          .format(real_faces_tr, attack_f_faces_tr, attack_h_faces_tr, real_faces_te, attack_f_faces_te, attack_h_faces_te))
+
+
+def extract(video_in, out_path, face_path, pad):
     '''
     This function detects and draws the eyes and faces that appears in the video following the
     default scheme face_cascade and eye_cascade
@@ -19,8 +91,17 @@ def makeDet(video_in, out_path, face_path, pad):
     img_ext = '.png'
     video_name = splitext(basename(video_in))[0]
 
-    # video = cv2.VideoCapture(video_in, 500)
-    video = cv2.VideoCapture(video_in, 1900)
+    '''
+    cv2.CAP_ANY
+    cv2.CAP_VFW
+    cv2.CAP_QT
+    cv2.CAP_DSHOW
+    cv2.CAP_MSMF 
+    cv2.CAP_WINRT
+    cv2.CAP_FFMPEG
+    cv2.CAP_PROP_FOURCC
+    '''
+    video = cv2.VideoCapture(video_in, cv2.CAP_FFMPEG)
     # video = cv2.VideoCapture(video_in, 6)
 
     num = 0
