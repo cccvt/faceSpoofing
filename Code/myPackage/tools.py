@@ -2,19 +2,61 @@ from os import listdir, makedirs, errno, system
 from os.path import isfile, join, altsep, exists
 from natsort import natsorted, ns
 from matplotlib import pyplot as plt
+from collections import Counter
 import numpy as np
 import cv2
-# import re
-# import tempfile
+import itertools
 
 
-def prepareData(paths, descriptor, ratio= 1.0):
+def plot_confusion_matrix(plot_path, cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt_name = altsep.join((plot_path,"".join((title,".png"))))
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label', labelpad=0)
+
+    plt.savefig(plt_name)
+    plt.show()
+
+
+def prepareData(paths, descriptor, plot_path, ratio= 1.0):
     labels = []
     data = []
     numData = int(countFiles(paths)*ratio)
+    first_r = True
+    first_a = True
+    numLabels = {}
 
     if ratio != 1.0:
-        print("{} examples will be processed for TESTING\n".format(numData))
+        print("{} examples will be processed for TESTING with ratio = {}\n".format(numData, ratio))
         for path in paths:
             images = getSamples(path)
             # Randomize data for testing and get the first numData files
@@ -23,35 +65,90 @@ def prepareData(paths, descriptor, ratio= 1.0):
             for image in images:
                 img = cv2.imread(image)
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                hist = descriptor.describe(gray)
+                hist, bins, lbp_img = descriptor.describe(gray)
 
                 # extract the label from the image path, then update the
                 # label and data lists
-                labels.append(image.split("/")[-2])
+                lbl = image.split("/")[-2]
+                labels.append(lbl)
                 data.append(hist)
-            if 'real' in labels and 'attack' in labels:
-                print("LABELS: SUCCESS!!")
-            else:
-                print("LABELS: SOMETHING WRONG!!")
+
+                if first_r and lbl == "real" or first_a and lbl == "attack":
+                    plt_name = altsep.join((plot_path, "".join((lbl, "_example_{}_{}.png".format(descriptor.numPoints, descriptor.radius)))))
+                    fig = plt.figure()
+                    plt.subplot(131), plt.imshow(gray, cmap='gray')
+                    plt.axis('off'), plt.title("Image original (gray)")
+
+                    plt.subplot(132), plt.imshow(lbp_img, cmap='gray')
+                    plt.axis('off'), plt.title("LBP")
+
+                    plt.subplot(133), plt.hist(lbp_img.ravel(), int(lbp_img.max()+2), normed= 1, color='red')
+                    # plt.title("LBP histogram")
+
+                    fig.suptitle(
+                        "{} image using LBP ({},{})".format(lbl, descriptor.numPoints, descriptor.radius),
+                        fontsize=14)
+
+                    plt.tight_layout()
+                    plt.savefig(plt_name)
+                    plt.show()
+
+                    if first_r and lbl == "real":
+                        first_r = False
+                    elif first_a and lbl == "attack":
+                        first_a = False
+
+        numLabels = Counter(labels)
+        # print(numLabels.keys())
+        print("Data array contains {} items ({} real and {} attack)\n"
+              "Labels array contains {} items\n".format(len(data), numLabels['real'], numLabels['attack'], len(labels)))
+        # input("Press Enter to continue...")
     else:
-        print("{} examples will be processed for TRAINING\n".format(numData))
+        print("{} examples will be processed for TRAINING with ratio = {}\n".format(numData, ratio))
         for path in paths:
             images = getSamples(path)
 
             for image in images:
                 img = cv2.imread(image)
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                hist = descriptor.describe(gray)
+                hist, bins, lbp_img = descriptor.describe(gray)
 
                 # extract the label from the image path, then update the
                 # label and data lists
-                labels.append(image.split("/")[-2])
+                lbl = image.split("/")[-2]
+                labels.append(lbl)
                 data.append(hist)
-            if 'real' in labels and 'attack' in labels:
-                print("LABELS: SUCCESS!!")
-            else:
-                print("LABELS: SOMETHING WRONG!!")
 
+                if first_r and lbl == "real" or first_a and lbl == "attack":
+                    plt_name = altsep.join((plot_path, "".join(
+                        (lbl, "_example_{}_{}.png".format(descriptor.numPoints, descriptor.radius)))))
+                    fig = plt.figure()
+                    plt.subplot(131), plt.imshow(gray, cmap='gray')
+                    plt.axis('off'), plt.title("Image original (gray)")
+
+                    plt.subplot(132), plt.imshow(lbp_img, cmap='gray')
+                    plt.axis('off'), plt.title("LBP")
+
+                    plt.subplot(133), plt.hist(lbp_img.ravel(), int(lbp_img.max()+2), normed= 1, color='red')
+                    # plt.title("LBP histogram")
+
+                    fig.suptitle(
+                        "{} image using LBP ({},{})".format(lbl, descriptor.numPoints, descriptor.radius),
+                        fontsize=14)
+
+                    plt.tight_layout()
+                    plt.savefig(plt_name)
+                    plt.show()
+
+                    if first_r and lbl == "real":
+                        first_r = False
+                    elif first_a and lbl == "attack":
+                        first_a = False
+        numLabels = Counter(labels)
+        # print(numLabels.keys())
+        print("Data array contains {} items ({} real and {} attack)\n"
+              "Labels array contains {} items\n".format(len(data), numLabels['real'], numLabels['attack'], len(labels)))
+        # input("Press Enter to continue...")
     return data, labels
 
 
